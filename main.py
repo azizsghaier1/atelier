@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 def generer_la_matrice(N:int , L:float):
     h=L/N
     A=np.zeros((N-1,N-1))
-    A[0,0]=-2
+    A[0,0]=2
     A[1,0]=-1
     A[N-2,N-2]=2
     A[N-3,N-2]=-1
@@ -29,55 +29,95 @@ def gradient_descendant(T0,TL,g,N,L,X0:list,alpha,n_iter,epsilon) :
     A=generer_la_matrice(N,L)
     b=generer_b(T0,TL,g,N)
     X0=np.array(X0)
-    print('A={} , b={})'.format(A,b))
+    # print('A={} , b={})'.format(A,b))
     f=[1/2*np.dot(np.dot(A,X0),X0)-np.dot(b,X0)]
     for k in range(n_iter) :
         d=-(np.dot(A,X0)-np.array(b))
-        print(d)
         X0=X0+alpha*d
         f.append(1/2*np.dot(np.dot(A,X0),X0)-np.dot(b,X0))
-        print('X0=',X0)
+        # print('X0=',X0)
+        # print('norm=',np.linalg.norm(np.dot(A,X0)-b))
         if np.linalg.norm(np.dot(A,X0)-b)<epsilon :
             break
-    print(f)
+    # print(f)
+    plt.title('le processus de minimisation grad desc')
+    plt.xlabel('itérations')
+    plt.ylabel('fonction objective')
     plt.plot(f)
     plt.show()
-    return X0
+    return 'la solution de gradient_descendant est ',X0
 #deuxième approche: Gradient descendent à pas optimal
 def gradient_descendant_opt(T0,TL,g,N,L,X0:list,n_iter,epsilon) :
     A=generer_la_matrice(N,L)
+    # print(A*(L**2/N**2))
     b=generer_b(T0,TL,g,N)
     X0=np.array(X0)
     f=[1/2*np.dot(np.dot(A,X0),X0)-np.dot(b,X0)]
-    print('A={} , b={})'.format(A,b))
-    for k in range(n_iter) :
+    # print('A={} , b={})'.format(A,b))
+    for i in range(n_iter):
         d=-(np.dot(A,X0)-np.array(b))
         alpha=(np.dot(d,d))/np.dot(np.dot(A,d),d)
-        print('alpha=',alpha)
+        # print('alpha=',alpha)
         X0=X0+alpha*d
+        plt.title('le processus de minimisation grad opt')
+        plt.xlabel('itérations')
+        plt.ylabel('fonction objective')
         f.append( ((1 / 2) * np.dot(np.dot(A, X0), X0) - np.dot(b, X0)) )
-        print('X0=',X0)
+        # print('X0=',X0)
         if np.linalg.norm(np.dot(A,X0)-b)<epsilon :
             break
-    print('f=',f)
+    # print('f=',f)
     plt.plot(f)
     plt.show()
-    return X0
+    return 'la solution de gradient_descendant_opt est ',X0
 def gradient_descendant_conj(T0,TL,g,N,L,X0:list,n_iter,epsilon) :
     A=generer_la_matrice(N,L)
     b=generer_b(T0,TL,g,N)
     X0=np.array(X0)
+    f=[1/2*np.dot(np.dot(A,X0),X0)-np.dot(b,X0)]
     d = -(np.dot(A, X0) - np.array(b))
     alpha = (np.dot(d, d)) / np.dot(np.dot(A, d), d)
-    print('A={} , b={})'.format(A,b))
+    # print('A={} , b={})'.format(A,b))
     for k in range(n_iter) :
         g=(np.dot(A, X0) - np.array(b))
         beta=(np.dot(np.dot(A,g),g)) / np.dot(np.dot(A, d), d)
         d=-g+beta*d
         alpha=-(np.dot(d,g)/np.dot(np.dot(A,d),d))
         X0=X0+alpha*d
-        print('X0=',X0)
+        # print(X0)
+        f.append( ((1 / 2) * np.dot(np.dot(A, X0), X0) - np.dot(b, X0)) )
+        # print('X0=',X0)
         if np.linalg.norm(np.dot(A,X0)-b)<epsilon :
             break
-print(gradient_descendant_opt(10,0,[10,20,10],4,5,[50,250,10],15,0.001))
-
+    plt.title('le processus de minimisation grad conj')
+    plt.xlabel('itérations')
+    plt.ylabel('fonction objective')
+    # print('f=',f)
+    plt.plot(f)
+    plt.show()
+    return 'la solution de gradient descendant conjugué est ',X0
+alpha=0.01
+print(gradient_descendant(T0=10,TL=10,g=[10,20,10],N=4,L=5,X0=[50,250,300],alpha=0.75,n_iter=30,epsilon=0.00001))
+print(gradient_descendant_opt(T0=10,TL=10,g=[10,20,10],N=4,L=5,X0=[50,250,300],n_iter=10,epsilon=0.00001))
+print(gradient_descendant_conj(T0=10,TL=10,g=[10,20,10],N=4,L=5,X0=[50,250,300],n_iter=10,epsilon=0.00001))
+def best_step_grad(T0,TL,g,N,L,X0:list,n_iter,epsilon) :
+    A = generer_la_matrice(N, L)
+    b = generer_b(T0, TL, g, N)
+    X0 = np.array(X0)
+    # print('A={} , b={})'.format(A,b))
+    alpha=np.linspace(0,1.5,200)
+    niter=list()
+    for step in alpha:
+        X=X0
+        for k in range(n_iter):
+            d = -(np.dot(A, X) - np.array(b))
+            X = X + step * d
+            if np.linalg.norm(np.dot(A, X) - b) < epsilon:
+                break
+        niter.append(k)
+    plt.title('trouver le meilleur pas')
+    plt.xlabel('pas')
+    plt.ylabel("nombre d'itération")
+    plt.plot(alpha,niter)
+    plt.show()
+best_step_grad(T0=10,TL=10,g=[10,20,10],N=4,L=5,X0=[50,250,300],n_iter=50,epsilon=100)
