@@ -1,0 +1,388 @@
+import numpy as np 
+import matplotlib.pyplot as plt
+import math
+from numpy import linalg 
+from torch.autograd.functional import jacobian
+import tensorflow as tf
+def saisie() :
+    b = list()
+    X0 = list()
+    while 1:
+        try:
+            N = int(input('donner la dimension N : '))
+        except:continueimport numpy as np 
+import matplotlib.pyplot as plt
+import math
+from numpy import linalg 
+from torch.autograd.functional import jacobian
+import tensorflow as tf
+def saisie() :
+    b = list()
+    X0 = list()
+    while 1:
+        try:
+            N = int(input('donner la dimension N : '))
+        except:continue
+        break
+    print('saisie de b:')
+    for i in range(((N - 1) ** 2)):
+        while 1:
+            try:
+                a = float(input('donner b[{}] :'.format(i)))
+            except:
+                continue
+            break
+        b.append(a)
+    print('saisie de X0:')
+    for i in range((N - 1) ** 2):
+        while 1:
+            try:
+                a = float(input('donner X0[{}] :'.format(i)))
+            except:
+                continue
+            break
+        X0.append(a)
+    return b,X0,N
+b,X0,N=saisie()
+
+def insert_matrix(A,B,i,j) :
+    n=B.shape[0]
+    for k in range(i,i+n):
+        for l in range(j,j+n) :
+            A[k,l]=B[k-i,l-j]
+    return A
+def generer_Bloc_B(N:int , L:float):
+    h=L/N
+    A=np.zeros((N-1,N-1))
+    A[0,0]=4
+    A[1,0]=-1
+    A[N-2,N-2]=4
+    A[N-3,N-2]=-1
+    for i in range(1,N-2):
+        A[i,i]=4
+        A[i-1,i]=-1
+        A[i+1,i]=-1
+    return A
+def generer_la_matrice(N:int,L:float) :
+    h=L/N
+    A=np.zeros(((N-1)**2,(N-1)**2))
+    #les premier et les derniers bloc de la matrice
+    B = generer_Bloc_B(N, L)
+    I=-1*np.eye(N-1)
+    A = insert_matrix(A, B, 0,0)
+    A=insert_matrix(A,I,0,N-1)
+    A = insert_matrix(A, B, ((N - 1)**2)-(N-1), ((N - 1)**2)-(N-1))
+    A=insert_matrix(A,I,((N-1)**2)-N+1,((N - 1)**2)-2*(N-1))
+    k=N-1
+    while k<=((N-1)**2)-N:
+        A=insert_matrix(A,B,k,k)
+        A=insert_matrix(A,I,k,k+N-1)
+        A =insert_matrix(A, I, k, k - (N - 1))
+        k+=(N-1)
+    return A*(1/(h**2))
+def gradF(A,X,B):
+    return np.dot(A,X)-B
+G=gradF(A,X,B)
+
+
+def Jacob(G,X):
+    G=tf.convert_to_tensor(G)
+    X=tf.convert_to_tensor(X)
+    return jacobian(G,X)
+print(Jacob(G,X))
+
+
+
+def Hessien(A,X,B):
+    return(Jacob(gradF(A,X,B)))
+print(Hessien(A,X,B))
+def algo_newton(A,X,B,err=1e-7):
+    gradFx=gradF(A,X,B)
+    while (gradFx.any()>err):
+        print(Hessien(A,X,B))
+        Z=gradFx/np.linalg.inv(Hessien(A,X,B))
+        X=X-Z
+    return X
+
+# print(generer_la_matrice(4,2))
+
+#Après la génération de A et b le problème qui se pose c'est de resoudre l'équatopn AX=b
+#Pour cela on va résoudre le problème de minimisation de la fonction objective 1/2*<AX,X>-<b,X> par la méthode de gradient descendant
+# def la_fonction_objective(A,)
+#je vais tout long ce code effectuer trois approche pour résoudre ce problème
+#premier Approche: Gradient descendent à pas fix alpha (notons que 0<alpha<2/lambda max ) de préference que alpha=2/(lambda min + lambda max )
+def gradient_descendant(b,N,L,X0:list,alpha,n_iter,epsilon) :
+    A=generer_la_matrice(N,L)
+    X0=np.array(X0)
+    # print('A={} , b={})'.format(A,b))
+    f=[1/2*np.dot(np.dot(A,X0),X0)-np.dot(b,X0)]
+    for k in range(n_iter) :
+        d=-(np.dot(A,X0)-np.array(b))
+        X0=X0+alpha*d
+        f.append(1/2*np.dot(np.dot(A,X0),X0)-np.dot(b,X0))
+        # print('X0=',X0)
+        # print('norm=',np.linalg.norm(np.dot(A,X0)-b))
+        if np.linalg.norm(np.dot(A,X0)-b)<epsilon :
+            break
+    # print(f)
+    plt.title('le processus de minimisation grad desc')
+    plt.xlabel('itérations')
+    plt.ylabel('fonction objective')
+    plt.plot(f)
+    plt.show()
+    return 'la solution de gradient_descendant est ',X0
+#deuxième approche: Gradient descendent à pas optimal
+def gradient_descendant_opt(b,N,L,X0:list,n_iter,epsilon) :
+    A=generer_la_matrice(N,L)
+    X0=np.array(X0)
+    f=[1/2*np.dot(np.dot(A,X0),X0)-np.dot(b,X0)]
+    # print('A={} , b={})'.format(A,b))
+    for i in range(n_iter):
+        d=-(np.dot(A,X0)-np.array(b))
+        alpha=(np.dot(d,d))/np.dot(np.dot(A,d),d)
+        # print('alpha=',alpha)
+        X0=X0+alpha*d
+        plt.title('le processus de minimisation grad opt')
+        plt.xlabel('itérations')
+        plt.ylabel('fonction objective')
+        f.append( ((1 / 2) * np.dot(np.dot(A, X0), X0) - np.dot(b, X0)) )
+        # print('X0=',X0)
+        if np.linalg.norm(np.dot(A,X0)-b)<epsilon :
+            break
+    # print('f=',f)
+    plt.plot(f)
+    plt.show()
+    return 'la solution de gradient_descendant_opt est ',X0
+def gradient_descendant_conj(b,N,L,X0:list,n_iter,epsilon) :
+    A=generer_la_matrice(N,L)
+    X0=np.array(X0)
+    f=[1/2*np.dot(np.dot(A,X0),X0)-np.dot(b,X0)]
+    d = -(np.dot(A, X0) - np.array(b))
+    alpha = (np.dot(d, d)) / np.dot(np.dot(A, d), d)
+    # print('A={} , b={})'.format(A,b))
+    for k in range(n_iter) :
+        g=(np.dot(A, X0) - np.array(b))
+        beta=(np.dot(np.dot(A,g),g)) / np.dot(np.dot(A, d), d)
+        d=-g+beta*d
+        alpha=-(np.dot(d,g)/np.dot(np.dot(A,d),d))
+        X0=X0+alpha*d
+        # print(X0)
+        f.append( ((1 / 2) * np.dot(np.dot(A, X0), X0) - np.dot(b, X0)) )
+        # print('X0=',X0)
+        if np.linalg.norm(np.dot(A,X0)-b)<epsilon :
+            break
+    plt.title('le processus de minimisation grad conj')
+    plt.xlabel('itérations')
+    plt.ylabel('fonction objective')
+    # print('f=',f)
+    plt.plot(f)
+    plt.show()
+    return 'la solution de gradient descendant conjugué est ',X0
+alpha=0.01
+print(gradient_descendant(b=b,N=N,L=5,X0=X0,alpha=0.75,n_iter=30,epsilon=0.00001))
+print(gradient_descendant_opt(b=b,N=N,L=5,X0=X0,n_iter=10,epsilon=0.00001))
+print(gradient_descendant_conj(b=b,N=N,L=5,X0=X0,n_iter=10,epsilon=0.00001))
+def best_step_grad(b,N,L,X0:list,n_iter,epsilon) :
+    A = generer_la_matrice(N, L)
+    X0 = np.array(X0)
+    # print('A={} , b={})'.format(A,b))
+    alpha=np.linspace(0,1.5,200)
+    niter=list()
+    for step in alpha:
+        X=X0
+        for k in range(n_iter):
+            d = -(np.dot(A, X) - np.array(b))
+            X = X + step * d
+            if np.linalg.norm(np.dot(A, X) - b) < epsilon:
+                break
+        niter.append(k)
+    plt.title('trouver le meilleur pas')
+    plt.xlabel('pas')
+    plt.ylabel("nombre d'itération")
+    plt.plot(alpha,niter)
+    plt.show()
+best_step_grad(b=b,N=N,L=5,X0=X0,n_iter=50,epsilon=100)
+A=generer_la_matrice(N, 5)
+
+
+        break
+    print('saisie de b:')
+    for i in range(((N - 1) ** 2)):
+        while 1:
+            try:
+                a = float(input('donner b[{}] :'.format(i)))
+            except:
+                continue
+            break
+        b.append(a)
+    print('saisie de X0:')
+    for i in range((N - 1) ** 2):
+        while 1:
+            try:
+                a = float(input('donner X0[{}] :'.format(i)))
+            except:
+                continue
+            break
+        X0.append(a)
+    return b,X0,N
+b,X0,N=saisie()
+
+def insert_matrix(A,B,i,j) :
+    n=B.shape[0]
+    for k in range(i,i+n):
+        for l in range(j,j+n) :
+            A[k,l]=B[k-i,l-j]
+    return A
+def generer_Bloc_B(N:int , L:float):
+    h=L/N
+    A=np.zeros((N-1,N-1))
+    A[0,0]=4
+    A[1,0]=-1
+    A[N-2,N-2]=4
+    A[N-3,N-2]=-1
+    for i in range(1,N-2):
+        A[i,i]=4
+        A[i-1,i]=-1
+        A[i+1,i]=-1
+    return A
+def generer_la_matrice(N:int,L:float) :
+    h=L/N
+    A=np.zeros(((N-1)**2,(N-1)**2))
+    #les premier et les derniers bloc de la matrice
+    B = generer_Bloc_B(N, L)
+    I=-1*np.eye(N-1)
+    A = insert_matrix(A, B, 0,0)
+    A=insert_matrix(A,I,0,N-1)
+    A = insert_matrix(A, B, ((N - 1)**2)-(N-1), ((N - 1)**2)-(N-1))
+    A=insert_matrix(A,I,((N-1)**2)-N+1,((N - 1)**2)-2*(N-1))
+    k=N-1
+    while k<=((N-1)**2)-N:
+        A=insert_matrix(A,B,k,k)
+        A=insert_matrix(A,I,k,k+N-1)
+        A =insert_matrix(A, I, k, k - (N - 1))
+        k+=(N-1)
+    return A*(1/(h**2))
+def gradF(A,X,B):
+    return np.dot(A,X)-B
+G=gradF(A,X,B)
+
+
+def Jacob(G,X):
+    G=tf.convert_to_tensor(G)
+    X=tf.convert_to_tensor(X)
+    return jacobian(G,X)
+print(Jacob(G,X))
+
+
+
+def Hessien(A,X,B):
+    return(Jacob(gradF(A,X,B)))
+print(Hessien(A,X,B))
+def algo_newton(A,X,B,err=1e-7):
+    gradFx=gradF(A,X,B)
+    while (gradFx.any()>err):
+        print(Hessien(A,X,B))
+        Z=gradFx/np.linalg.inv(Hessien(A,X,B))
+        X=X-Z
+    return X
+
+# print(generer_la_matrice(4,2))
+
+#Après la génération de A et b le problème qui se pose c'est de resoudre l'équatopn AX=b
+#Pour cela on va résoudre le problème de minimisation de la fonction objective 1/2*<AX,X>-<b,X> par la méthode de gradient descendant
+# def la_fonction_objective(A,)
+#je vais tout long ce code effectuer trois approche pour résoudre ce problème
+#premier Approche: Gradient descendent à pas fix alpha (notons que 0<alpha<2/lambda max ) de préference que alpha=2/(lambda min + lambda max )
+def gradient_descendant(b,N,L,X0:list,alpha,n_iter,epsilon) :
+    A=generer_la_matrice(N,L)
+    X0=np.array(X0)
+    # print('A={} , b={})'.format(A,b))
+    f=[1/2*np.dot(np.dot(A,X0),X0)-np.dot(b,X0)]
+    for k in range(n_iter) :
+        d=-(np.dot(A,X0)-np.array(b))
+        X0=X0+alpha*d
+        f.append(1/2*np.dot(np.dot(A,X0),X0)-np.dot(b,X0))
+        # print('X0=',X0)
+        # print('norm=',np.linalg.norm(np.dot(A,X0)-b))
+        if np.linalg.norm(np.dot(A,X0)-b)<epsilon :
+            break
+    # print(f)
+    plt.title('le processus de minimisation grad desc')
+    plt.xlabel('itérations')
+    plt.ylabel('fonction objective')
+    plt.plot(f)
+    plt.show()
+    return 'la solution de gradient_descendant est ',X0
+#deuxième approche: Gradient descendent à pas optimal
+def gradient_descendant_opt(b,N,L,X0:list,n_iter,epsilon) :
+    A=generer_la_matrice(N,L)
+    X0=np.array(X0)
+    f=[1/2*np.dot(np.dot(A,X0),X0)-np.dot(b,X0)]
+    # print('A={} , b={})'.format(A,b))
+    for i in range(n_iter):
+        d=-(np.dot(A,X0)-np.array(b))
+        alpha=(np.dot(d,d))/np.dot(np.dot(A,d),d)
+        # print('alpha=',alpha)
+        X0=X0+alpha*d
+        plt.title('le processus de minimisation grad opt')
+        plt.xlabel('itérations')
+        plt.ylabel('fonction objective')
+        f.append( ((1 / 2) * np.dot(np.dot(A, X0), X0) - np.dot(b, X0)) )
+        # print('X0=',X0)
+        if np.linalg.norm(np.dot(A,X0)-b)<epsilon :
+            break
+    # print('f=',f)
+    plt.plot(f)
+    plt.show()
+    return 'la solution de gradient_descendant_opt est ',X0
+def gradient_descendant_conj(b,N,L,X0:list,n_iter,epsilon) :
+    A=generer_la_matrice(N,L)
+    X0=np.array(X0)
+    f=[1/2*np.dot(np.dot(A,X0),X0)-np.dot(b,X0)]
+    d = -(np.dot(A, X0) - np.array(b))
+    alpha = (np.dot(d, d)) / np.dot(np.dot(A, d), d)
+    # print('A={} , b={})'.format(A,b))
+    for k in range(n_iter) :
+        g=(np.dot(A, X0) - np.array(b))
+        beta=(np.dot(np.dot(A,g),g)) / np.dot(np.dot(A, d), d)
+        d=-g+beta*d
+        alpha=-(np.dot(d,g)/np.dot(np.dot(A,d),d))
+        X0=X0+alpha*d
+        # print(X0)
+        f.append( ((1 / 2) * np.dot(np.dot(A, X0), X0) - np.dot(b, X0)) )
+        # print('X0=',X0)
+        if np.linalg.norm(np.dot(A,X0)-b)<epsilon :
+            break
+    plt.title('le processus de minimisation grad conj')
+    plt.xlabel('itérations')
+    plt.ylabel('fonction objective')
+    # print('f=',f)
+    plt.plot(f)
+    plt.show()
+    return 'la solution de gradient descendant conjugué est ',X0
+alpha=0.01
+print(gradient_descendant(b=b,N=N,L=5,X0=X0,alpha=0.75,n_iter=30,epsilon=0.00001))
+print(gradient_descendant_opt(b=b,N=N,L=5,X0=X0,n_iter=10,epsilon=0.00001))
+print(gradient_descendant_conj(b=b,N=N,L=5,X0=X0,n_iter=10,epsilon=0.00001))
+def best_step_grad(b,N,L,X0:list,n_iter,epsilon) :
+    A = generer_la_matrice(N, L)
+    X0 = np.array(X0)
+    # print('A={} , b={})'.format(A,b))
+    alpha=np.linspace(0,1.5,200)
+    niter=list()
+    for step in alpha:
+        X=X0
+        for k in range(n_iter):
+            d = -(np.dot(A, X) - np.array(b))
+            X = X + step * d
+            if np.linalg.norm(np.dot(A, X) - b) < epsilon:
+                break
+        niter.append(k)
+    plt.title('trouver le meilleur pas')
+    plt.xlabel('pas')
+    plt.ylabel("nombre d'itération")
+    plt.plot(alpha,niter)
+    plt.show()
+best_step_grad(b=b,N=N,L=5,X0=X0,n_iter=50,epsilon=100)
+A=generer_la_matrice(N, 5)
+
